@@ -1,0 +1,17 @@
+[general]
+download_folders = 'D:\Download','D:\Temp'
+
+[movie]
+movie_folder = D:\Multimedia\Movie
+movie_file = movies.csv
+
+[tv]
+tv_folder = D:\Multimedia\TV
+
+[music]
+
+[photo]
+
+[log]
+log_level = INFO
+log_directory = Log
