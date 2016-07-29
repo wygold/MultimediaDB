@@ -13,6 +13,7 @@ import guessit
 
 from property_utility import property_utility
 import Omdb
+import getSubtitle
 
 class movie_manage():
 
@@ -136,9 +137,11 @@ class movie_manage():
 
 
 
-    def retrieve_movie_subtitle(self):
-        None
+    def retrieve_movie_subtitle(self, movie):
+        # download best subtitles
+        getSubtitle.main(movie)
 
+    # move downloaded movie to correct folder
     def move_movie_to_library(self):
         movie_folder = parameters['movie']['movie_folder']
         download_folders = parameters['general']['download_folders'].split(',')
@@ -157,6 +160,10 @@ class movie_manage():
                             if not os.path.exists(movie_folder+'//'+movie_year):
                                 os.mkdir(movie_folder+'//'+movie_year)
                             os.rename(root+'//'+f, movie_folder+'//'+movie_year+'//'+f)
+
+                            self.retrieve_movie_subtitle(root+'//'+f)
+
+
                     except KeyError:
                         continue
 
@@ -165,3 +172,4 @@ if __name__ == "__main__":
     #app.create_movie_db()
     #app.update_movie_db()
     app.move_movie_to_library()
+    #app.retrieve_movie_subtitle()
