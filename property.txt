@@ -1,5 +1,5 @@
 [general]
-download_folders = 'D:\Download','D:\Temp'
+download_folders = D:\_client\hsbc,D:\Temp
 
 [movie]
 movie_folder = D:\Multimedia\Movie
