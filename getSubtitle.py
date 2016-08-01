@@ -18,10 +18,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #from __future__ import unicode_literals
 from os.path import getsize, splitext, basename
 from hashlib import md5 as hashlib_md5
+import guessit
 import json
 from json import loads as json_loads
 from sys import argv, getfilesystemencoding
-from platform import system
+
 #Python3 support
 try:
     from urllib.request import Request, urlopen, urlretrieve
@@ -35,6 +36,9 @@ SHOOTER_URL = 'http://shooter.cn/api/subapi.php'
 SUBDB_URL = lambda hash: "http://api.thesubdb.com/?action=download&hash={}&language=en".format(hash)
 PGS_UA = {'User-Agent': "SubDB/1.0 (PyGetSubTitle/0.1; http://github.com/truebit/PyGetSubtitle)"}
 ASSRT_URL = "http://api.assrt.net/v1/sub/search?"
+ASSRT_DETAIL_URL ="http://api.assrt.net/v1/sub/detail?"
+ASSRT_TOKEN = "jR4VQSwspLhs50lAQRNyeOaygpPzfiQz"
+
 
 def md5_hash(file_path):
     """this hash function receives the name of the file and returns the hash code"""
@@ -46,22 +50,6 @@ def md5_hash(file_path):
     return hashlib_md5(data).hexdigest()
 
 
-def shooter_hash(file_path):
-    "see https://docs.google.com/document/d/1w5MCBO61rKQ6hI5m9laJLWse__yTYdRugpVyz4RzrmM/preview"
-    f_size = getsize(file_path)
-    if f_size < 8196:
-        print ('文件太小了……你确定选中的是视频文件么……'.encode(getfilesystemencoding()))
-        return None
-    with open(file_path, 'rb') as f:
-        f_size_3rd = int(f_size / 3)
-        # 中间两个顺序反了？作者文档上就是这么写的。。。
-        offsets = (4096, f_size_3rd * 2, f_size_3rd, f_size - 8192)
-        result = []
-        for offset in offsets:
-            f.seek(offset)
-            result.append(hashlib_md5(f.read(4096)).hexdigest())
-        return ';'.join(result)
-
 
 def request(url, data, headers=PGS_UA):
     """not using requests library due to rule of no-3rd-party-lib"""
@@ -71,37 +59,6 @@ def request(url, data, headers=PGS_UA):
     req = Request(url, data=data, headers=headers)
     resp = urlopen(req).read()
     return resp
-
-def shooter_downloader(file_path):
-    """ see https://docs.google.com/document/d/1ufdzy6jbornkXxsD-OGl3kgWa4P9WO5NZb6_QYZiGI0/preview
-    """
-    resp = request(SHOOTER_URL,
-                   data={'filehash': shooter_hash(file_path), 'pathinfo': basename(file_path), 'format': 'json'})
-    try:
-        r_json = json_loads(resp)
-    except:
-        print ('射手网没找到字幕'.encode(getfilesystemencoding()))
-        return False
-    else:
-        f_name, file_extension = splitext(file_path)
-        result = []
-        for info in r_json:
-            for f_info in info['Files']:
-                # 不下载idx和sub版本的字幕
-                if f_info['Ext'] not in ('sub', 'idx'):
-                    result.append((f_info['Link'], f_info['Ext']))
-        if len(result) < 1:
-            print ('射手网没有找到字幕'.encode(getfilesystemencoding()))
-            return False
-        elif len(result) == 1:
-            urlretrieve(result[0][0], filename='{}.{}'.format(f_name, result[0][1]))
-            print ('字幕下载完成'.encode(getfilesystemencoding()))
-        else:
-            for idx, value in enumerate(result):
-                urlretrieve(value[0], filename='{}_{}.{}'.format(f_name, idx + 1, value[1]))
-                print ('第{}个字幕下载完成'.format(idx + 1).encode(getfilesystemencoding()))
-        return True
-
 
 def subdb_downloader(file_path):
     """see http://thesubdb.com/api/"""
@@ -120,45 +77,51 @@ def subdb_downloader(file_path):
     return True
 
 def assrt_downloader(file_path):
-
+    #get file name
     f_name, file_extension = splitext(file_path)
-    resp = request(ASSRT_URL, data={'q': f_name, 'token': 'jR4VQSwspLhs50lAQRNyeOaygpPzfiQz'})
 
+    #search for the subtitle with file name, it will return subtitle id
+    resp = request(ASSRT_URL, data={'q': f_name, 'token':ASSRT_TOKEN})
     response = resp.decode()
     print(response)
-    id = json.loads(response)['sub']['subs'][0]['id']
 
-    detail_url = "http://api.assrt.net/v1/sub/detail?"
+    #choose the right subtitle to download
+    subs=json.loads(response)['sub']['subs']
+    for sub in subs:
+        if 'lang' not in sub:
+            continue
 
-    params = {
-        "id": id,
-        "token": 'jR4VQSwspLhs50lAQRNyeOaygpPzfiQz'
-    }
+        languages=sub['lang']['langlist']
+        if 'langchs' in languages or 'langdou' in languages:
+            resp = request(ASSRT_DETAIL_URL, data={'id': str(sub['id']), 'token': ASSRT_TOKEN})
+            response = resp.decode()
 
-    myRequest = Request(detail_url, urlencode(params).encode())
-    response = urlopen(myRequest).read().decode()
+            #print(response)
+            try:
+                download_url = json.loads(response)['sub']['subs'][0]['filelist'][0]['url']
+                download_filename = json.loads(response)['sub']['subs'][0]['filelist'][0]['f']
+                #print(download_url)
+                #print(download_filename)
+            except KeyError:
+                download_url = json.loads(response)['sub']['subs'][0]['url']
+                download_filename = json.loads(response)['sub']['subs'][0]['filename']
+                #print(download_url)
+                #print(download_filename)
 
-    print(response)
-    try:
-        download_url = json.loads(response)['sub']['subs'][0]['filelist'][0]['url']
-        download_filename = json.loads(response)['sub']['subs'][0]['filelist'][0]['f']
-        print(download_url)
-        print(download_filename)
-    except KeyError:
-        download_url = json.loads(response)['sub']['subs'][0]['url']
-        download_filename = json.loads(response)['sub']['subs'][0]['filename']
-        print(download_url)
-        print(download_filename)
+            subtitle_name, subtitle_extension = splitext(download_filename)
 
-    # Download the file from `url` and save it locally under `file_name`:
-    req = Request(download_url, headers={'User-Agent': 'Mozilla/5.0'})
-    with urlopen(req) as response, open(download_filename, 'wb') as out_file:
-        data = response.read()  # a `bytes` object
-        out_file.write(data)
+            # Download the file from `url` and save it locally under `file_name`:
+            req = Request(download_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urlopen(req) as response, open(f_name+subtitle_extension, 'wb') as out_file:
+                data = response.read()  # a `bytes` object
+                out_file.write(data)
+
+            return True
+    return False
 
 def main(path):
     #path = path.decode(getfilesystemencoding())
-    status = shooter_downloader(path)
+    status = assrt_downloader(path)
     if status:
         return
     else:
@@ -166,4 +129,4 @@ def main(path):
 
 
 if __name__ == "__main__":
-    assrt_downloader('The.Big.Bang.Theory.S05E18.HDTV.x264-LOL.mp4')
+    main('The Girl With The Dragon Tattoo [2009].mkv')
