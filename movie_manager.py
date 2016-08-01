@@ -10,6 +10,12 @@ __author__ = 'ywang'
 import logging
 import os, os.path
 import guessit
+import requests
+import json
+
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+from urllib import request
 
 from property_utility import property_utility
 import Omdb
@@ -167,9 +173,52 @@ class movie_manage():
                     except KeyError:
                         continue
 
+
+    def test(self,movie):
+        search_url = "http://api.assrt.net/v1/sub/search?"
+
+        params = {
+            "q": movie,
+            "token": 'jR4VQSwspLhs50lAQRNyeOaygpPzfiQz'
+        }
+
+        request = Request(search_url, urlencode(params).encode())
+        response = urlopen(request).read().decode()
+        print(response)
+        id = json.loads(response)['sub']['subs'][0]['id']
+
+
+        detail_url = "http://api.assrt.net/v1/sub/detail?"
+
+        params = {
+            "id": id ,
+            "token": 'jR4VQSwspLhs50lAQRNyeOaygpPzfiQz'
+        }
+
+        request = Request(detail_url, urlencode(params).encode())
+        response = urlopen(request).read().decode()
+
+        try:
+            download_url = json.loads(response)['sub']['subs'][0]['filelist'][0]['url']
+            download_filename= json.loads(response)['sub']['subs'][0]['filelist'][0]['f']
+            print(download_url)
+            print(download_filename)
+        except KeyError:
+            download_url = json.loads(response)['sub']['subs'][0]['url']
+            download_filename = json.loads(response)['sub']['subs'][0]['filename']
+            print(download_url)
+            print(download_filename)
+
+        # Download the file from `url` and save it locally under `file_name`:
+        req=Request(download_url,headers={'User-Agent': 'Mozilla/5.0'})
+        with urlopen(req) as response, open(download_filename, 'wb') as out_file:
+            data = response.read()  # a `bytes` object
+            out_file.write(data)
+
 if __name__ == "__main__":
     app = movie_manage()
     #app.create_movie_db()
     #app.update_movie_db()
-    app.move_movie_to_library()
+    #app.move_movie_to_library()
     #app.retrieve_movie_subtitle()
+    app.test('The.Big.Bang.Theory.S05E18')
