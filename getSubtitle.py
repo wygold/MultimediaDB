@@ -50,7 +50,6 @@ def md5_hash(file_path):
     return hashlib_md5(data).hexdigest()
 
 
-
 def request(url, data, headers=PGS_UA):
     """not using requests library due to rule of no-3rd-party-lib"""
     if data and isinstance(data, dict):
@@ -78,12 +77,13 @@ def subdb_downloader(file_path):
 
 def assrt_downloader(file_path):
     #get file name
-    f_name, file_extension = splitext(file_path)
+
+    f_name = file_path.split("\\")[-1]
 
     #search for the subtitle with file name, it will return subtitle id
     resp = request(ASSRT_URL, data={'q': f_name, 'token':ASSRT_TOKEN})
     response = resp.decode()
-    print(response)
+
 
     #choose the right subtitle to download
     subs=json.loads(response)['sub']['subs']
@@ -100,13 +100,10 @@ def assrt_downloader(file_path):
             try:
                 download_url = json.loads(response)['sub']['subs'][0]['filelist'][0]['url']
                 download_filename = json.loads(response)['sub']['subs'][0]['filelist'][0]['f']
-                #print(download_url)
-                #print(download_filename)
+
             except KeyError:
                 download_url = json.loads(response)['sub']['subs'][0]['url']
                 download_filename = json.loads(response)['sub']['subs'][0]['filename']
-                #print(download_url)
-                #print(download_filename)
 
             subtitle_name, subtitle_extension = splitext(download_filename)
 
@@ -115,7 +112,6 @@ def assrt_downloader(file_path):
             with urlopen(req) as response, open(f_name+subtitle_extension, 'wb') as out_file:
                 data = response.read()  # a `bytes` object
                 out_file.write(data)
-
             return True
     return False
 
@@ -129,4 +125,4 @@ def main(path):
 
 
 if __name__ == "__main__":
-    main('The Girl With The Dragon Tattoo [2009].mkv')
+    main('d:\\temp\\The Girl With The Dragon Tattoo [2009].mkv')
