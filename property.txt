@@ -1,12 +1,12 @@
 [general]
-download_folders = D:\_client\hsbc,D:\Temp
+download_folders = D:\_client\hsbc\,D:\Temp\
 
 [movie]
-movie_folder = D:\Multimedia\Movie
+movie_folder = D:\Multimedia\Movie\
 movie_file = movies.csv
 
 [tv]
-tv_folder = D:\Multimedia\TV
+tv_folder = D:\Multimedia\TV\
 
 [music]
 

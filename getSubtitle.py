@@ -34,10 +34,11 @@ except ImportError:
 
 SHOOTER_URL = 'http://shooter.cn/api/subapi.php'
 SUBDB_URL = lambda hash: "http://api.thesubdb.com/?action=download&hash={}&language=en".format(hash)
-PGS_UA = {'User-Agent': "SubDB/1.0 (PyGetSubTitle/0.1; http://github.com/truebit/PyGetSubtitle)"}
+PGS_UA = {'User-Agent': "Mozilla/5.0"}
 ASSRT_URL = "http://api.assrt.net/v1/sub/search?"
 ASSRT_DETAIL_URL ="http://api.assrt.net/v1/sub/detail?"
-ASSRT_TOKEN = "jR4VQSwspLhs50lAQRNyeOaygpPzfiQz"
+ASSRT_TOKEN = "hKD5UXCbb6eiC3UxqLhCdUm3yOrHK051"
+SUB_FILE_EXTS = ['SRT','SSA','ASS','SMI','PSB','PJS','STL','TTS','ZEG','VSF']
 
 
 def md5_hash(file_path):
@@ -75,54 +76,75 @@ def subdb_downloader(file_path):
         subtitle.write(resp)
     return True
 
-def assrt_downloader(file_path):
-    #get file name
-
-    f_name = file_path.split("\\")[-1]
+def assrt_downloader(file_path,f_name):
+    video_name, video_ext = splitext(f_name)
 
     #search for the subtitle with file name, it will return subtitle id
-    resp = request(ASSRT_URL, data={'q': f_name, 'token':ASSRT_TOKEN})
+    resp = request(ASSRT_URL, data={'q': video_name, 'token':ASSRT_TOKEN})
     response = resp.decode()
 
 
     #choose the right subtitle to download
     subs=json.loads(response)['sub']['subs']
+
+    #print(subs)
+
+    download_urls=[]
+
+
     for sub in subs:
+
+
         if 'lang' not in sub:
             continue
 
         languages=sub['lang']['langlist']
         if 'langchs' in languages or 'langdou' in languages:
+
             resp = request(ASSRT_DETAIL_URL, data={'id': str(sub['id']), 'token': ASSRT_TOKEN})
             response = resp.decode()
 
-            #print(response)
+
             try:
-                download_url = json.loads(response)['sub']['subs'][0]['filelist'][0]['url']
-                download_filename = json.loads(response)['sub']['subs'][0]['filelist'][0]['f']
+                files = json.loads(response)['sub']['subs'][0]['filelist']
+                for file in files:
+                    download_url = file['url']
+                    download_file = file['f']
+                    for sub_ext in SUB_FILE_EXTS:
+                        if "."+sub_ext+"?" in str(download_url).upper():
+                            print(sub_ext+":"+str(download_url).upper())
+                            download_urls.append([download_url,download_file])
+                            break
+
+                #print(download_urls)
 
             except KeyError:
                 download_url = json.loads(response)['sub']['subs'][0]['url']
                 download_filename = json.loads(response)['sub']['subs'][0]['filename']
 
-            subtitle_name, subtitle_extension = splitext(download_filename)
+            file_counter = 1
+            for download_info in download_urls:
+                subtitle_name, subtitle_extension = splitext(download_info[1])
+                print(download_info[0])
+                # Download the file from `url` and save it locally under `file_name`:
+                req = Request(download_info[0], headers={'User-Agent': 'Mozilla/5.0'})
 
-            # Download the file from `url` and save it locally under `file_name`:
-            req = Request(download_url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urlopen(req) as response, open(f_name+subtitle_extension, 'wb') as out_file:
-                data = response.read()  # a `bytes` object
-                out_file.write(data)
+                with urlopen(req) as response, open(file_path+video_name+"."+str(file_counter)+subtitle_extension, 'wb') as out_file:
+                    data = response.read()  # a `bytes` object
+                    out_file.write(data)
+                file_counter = file_counter + 1
             return True
     return False
 
-def main(path):
+def main(path,filename):
     #path = path.decode(getfilesystemencoding())
-    status = assrt_downloader(path)
-    if status:
-        return
-    else:
-        subdb_downloader(path)
 
+    status = assrt_downloader(path,filename)
+
+    # if status:
+    #     return
+    # else:
+    #     subdb_downloader(path + filename)
 
 if __name__ == "__main__":
-    main('d:\\temp\\The Girl With The Dragon Tattoo [2009].mkv')
+    main('d:\\temp\\','The Girl With The Dragon Tattoo.mkv')

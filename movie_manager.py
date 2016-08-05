@@ -11,7 +11,12 @@ import logging
 import os, os.path
 import guessit
 
+import requests
+import json
 
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+from urllib import request
 
 from property_utility import property_utility
 import Omdb
@@ -60,7 +65,7 @@ class movie_manage():
     def create_movie_db(self):
         movie_folder =  parameters['movie']['movie_folder']
 
-        movie_file = open(movie_folder+'//'+parameters['movie']['movie_file'], 'w')
+        movie_file = open(movie_folder+parameters['movie']['movie_file'], 'w')
         movie_file.write('path;filename;title;year;mimetype;imdbRating\n')
 
         for root, _, files in os.walk(movie_folder):
@@ -98,14 +103,14 @@ class movie_manage():
         movie_folder = parameters['movie']['movie_folder']
         movies_names = []
 
-        movie_file = open(movie_folder + '\\' + parameters['movie']['movie_file'], 'r')
+        movie_file = open(movie_folder +  parameters['movie']['movie_file'], 'r')
         old_movie_contents = movie_file.readlines()
         for line in old_movie_contents:
             fields = line.split(';')
             movies_names.append(fields[1])
         movie_file.close()
 
-        movie_file = open(movie_folder + '\\' + parameters['movie']['movie_file'], 'a')
+        movie_file = open(movie_folder + parameters['movie']['movie_file'], 'a')
 
         for root, _, files in os.walk(movie_folder):
             for f in files:
@@ -139,9 +144,9 @@ class movie_manage():
 
 
 
-    def retrieve_movie_subtitle(self, movie):
+    def retrieve_movie_subtitle(self, path, movie):
         # download best subtitles
-        getSubtitle.main(movie)
+        getSubtitle.main(path,movie)
 
     # move downloaded movie to correct folder
     def move_movie_to_library(self):
@@ -162,10 +167,10 @@ class movie_manage():
                             getSubtitle.main(root+'//'+f)
 
                             movie_year = str(file_analyze['year'])
-                            if not os.path.exists(movie_folder+'//'+movie_year):
-                                os.mkdir(movie_folder+'//'+movie_year)
-                            os.rename(root+'//'+f, movie_folder+'//'+movie_year+'//'+f)
-                            self.retrieve_movie_subtitle(root+'//'+f)
+                            if not os.path.exists(movie_folder+movie_year):
+                                os.mkdir(movie_folder+movie_year)
+                            os.rename(root+'//'+f, movie_folder + movie_year+'//'+f)
+                            self.retrieve_movie_subtitle(root, f)
 
 
                     except KeyError:
@@ -178,4 +183,5 @@ if __name__ == "__main__":
     #app.create_movie_db()
     #app.update_movie_db()
     #app.move_movie_to_library()
-    #app.retrieve_movie_subtitle()
+    app.retrieve_movie_subtitle('D:\Multimedia\Movie\\2011\\','terminator2.avi')
+    #app.test('The Girl With The Dragon Tattoo')
