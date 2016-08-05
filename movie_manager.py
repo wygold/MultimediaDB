@@ -170,7 +170,7 @@ class movie_manage():
                             if not os.path.exists(movie_folder+movie_year):
                                 os.mkdir(movie_folder+movie_year)
                             os.rename(root+'//'+f, movie_folder + movie_year+'//'+f)
-                            self.retrieve_movie_subtitle(root, f)
+                            self.retrieve_movie_subtitle(movie_folder + movie_year, root, f)
 
 
                     except KeyError:
@@ -182,6 +182,6 @@ if __name__ == "__main__":
     app = movie_manage()
     #app.create_movie_db()
     #app.update_movie_db()
-    #app.move_movie_to_library()
-    app.retrieve_movie_subtitle('D:\Multimedia\Movie\\2011\\','terminator2.avi')
+    app.move_movie_to_library()
+    #app.retrieve_movie_subtitle('D:\Multimedia\Movie\\2011\\','terminator2.avi')
     #app.test('The Girl With The Dragon Tattoo')
